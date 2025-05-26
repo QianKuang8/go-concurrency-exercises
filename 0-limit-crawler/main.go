@@ -12,12 +12,17 @@ package main
 import (
 	"fmt"
 	"sync"
+	"time"
 )
+
+var rateLimiter chan struct{}
 
 // Crawl uses `fetcher` from the `mockfetcher.go` file to imitate a
 // real crawler. It crawls until the maximum depth has reached.
 func Crawl(url string, depth int, wg *sync.WaitGroup) {
 	defer wg.Done()
+
+	<-rateLimiter
 
 	if depth <= 0 {
 		return
@@ -42,7 +47,25 @@ func Crawl(url string, depth int, wg *sync.WaitGroup) {
 func main() {
 	var wg sync.WaitGroup
 
+	rateLimiter = make(chan struct{})
+	stopCh := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		for {
+			select {
+			case <-stopCh:
+				ticker.Stop()
+				close(rateLimiter)
+				return
+			case <-ticker.C:
+				rateLimiter <- struct{}{}
+			}
+		}
+
+	}()
+
 	wg.Add(1)
 	Crawl("http://golang.org/", 4, &wg)
 	wg.Wait()
+	stopCh <- struct{}{}
 }
