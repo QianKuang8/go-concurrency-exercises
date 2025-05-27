@@ -42,9 +42,9 @@ func createMockRequest(pid int, fn func(), u *User) {
 	res := HandleRequest(fn, u)
 
 	if res {
-		fmt.Println("UserID:", u.ID, "\tProcess", pid, "done.")
+		fmt.Println("UserID:", u.ID, "\tProcess", pid, "done. time used:", u.TimeUsed)
 	} else {
-		fmt.Println("UserID:", u.ID, "\tProcess", pid, "killed. (No quota left)")
+		fmt.Println("UserID:", u.ID, "\tProcess", pid, "killed. (No quota left), time used:", u.TimeUsed)
 	}
 
 	wg.Done()
