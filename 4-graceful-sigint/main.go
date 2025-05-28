@@ -13,10 +13,42 @@
 
 package main
 
+import (
+	"os"
+	"os/signal"
+)
+
 func main() {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt)
+	finish := make(chan struct{}, 1)
+	stop := make(chan struct{}, 1)
+	defer func() {
+		close(sigChan)
+		close(finish)
+		close(stop)
+	}()
+
 	// Create a process
 	proc := MockProcess{}
 
 	// Run the process (blocking)
-	proc.Run()
+	go func() {
+		proc.Run()
+		finish <- struct{}{}
+	}()
+
+	for {
+		select {
+		case <-sigChan:
+			select {
+			case stop <- struct{}{}:
+				go proc.Stop()
+			default:
+				os.Exit(1) // kill the proces
+			}
+		case <-finish:
+			return
+		}
+	}
 }
